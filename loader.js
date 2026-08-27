@@ -122,8 +122,10 @@ function isMissingError(error){
 }
 
 function prepareRoot(root){
-    if(APP_CONFIG.MODEL.recapZUpToThreeYUp){
-        root.rotation.x=-Math.PI/2;
+    // ===== 追加箇所：モデル向き補正 =====
+    if(APP_CONFIG.MODEL.xUpToYUp){
+        // +X を +Y（上方向）へ移すため Z軸回りに +90° 回転
+        root.rotation.z += Math.PI/2;
     }
 
     root.traverse((child)=>{
