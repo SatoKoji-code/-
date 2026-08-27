@@ -22,15 +22,18 @@ export const APP_CONFIG = {
         // 安全上の最大確認数
         maxTiles: 5000,
 
-        // ReCap Z-up → Three.js Y-up の追加補正。必要な場合のみ true。
-        recapZUpToThreeYUp: false
+        // ===== 追加箇所：モデル向き補正 =====
+        // true: GLBの +X 方向を Three.js の +Y（上方向）へ回転
+        xUpToYUp: true
     },
 
     VIEW: {
         background: 0x20242b,
-        ambientLightIntensity: 1.5,
-        hemisphereLightIntensity: 1.1,
-        directionalLightIntensity: 1.2,
+        // ===== 追加箇所：明るさ強化 =====
+        ambientLightIntensity: 2.2,
+        hemisphereLightIntensity: 1.8,
+        directionalLightIntensity: 2.2,
+        fillLightIntensity: 1.4,
         rotateSpeed: 0.55,
         zoomSpeed: 1.0,
         panSpeed: 0.8,
@@ -45,8 +48,10 @@ export const APP_CONFIG = {
         decimals: 3,
         pointColor: 0xff4d4d,
         lineColor: 0xff4d4d,
+        activePointColor: 0xffff00,
         clickMoveTolerance: 5,
-        pointSizeRatio: 0.004
+        pointSizeRatio: 0.004,
+        lineClickThreshold: 0.03
     }
 };
 
