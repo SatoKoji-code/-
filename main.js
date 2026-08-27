@@ -24,6 +24,7 @@ camera.position.set(5,5,5);
 
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.shadowMap.enabled=false;
 canvasContainer.appendChild(renderer.domElement);
 
@@ -33,12 +34,21 @@ controls.rotateSpeed=APP_CONFIG.VIEW.rotateSpeed;
 controls.zoomSpeed=APP_CONFIG.VIEW.zoomSpeed;
 controls.panSpeed=APP_CONFIG.VIEW.panSpeed;
 
+// ===== 追加箇所：明かり強化 開始 =====
 scene.add(new THREE.AmbientLight(0xffffff,APP_CONFIG.VIEW.ambientLightIntensity));
-scene.add(new THREE.HemisphereLight(0xffffff,0x555555,APP_CONFIG.VIEW.hemisphereLightIntensity));
+scene.add(new THREE.HemisphereLight(0xffffff,0x777777,APP_CONFIG.VIEW.hemisphereLightIntensity));
+
 const directional=new THREE.DirectionalLight(0xffffff,APP_CONFIG.VIEW.directionalLightIntensity);
 directional.position.set(10,20,10);
 directional.castShadow=false;
 scene.add(directional);
+
+// 反対側から照らす補助ライト
+const fillLight=new THREE.DirectionalLight(0xffffff,APP_CONFIG.VIEW.fillLightIntensity);
+fillLight.position.set(-10,8,-10);
+fillLight.castShadow=false;
+scene.add(fillLight);
+// ===== 追加箇所：明かり強化 終了 =====
 
 scene.add(modelGroup);
 if(APP_CONFIG.VIEW.showAxes) scene.add(new THREE.AxesHelper(1));
