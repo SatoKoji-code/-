@@ -1,0 +1,218 @@
+/* ===== 追加箇所：GLB Viewer CSS 開始 ===== */
+
+:root{
+    --bg:#12161c;
+    --bar:#191e26;
+    --panel:rgba(25,30,38,.94);
+    --text:#f3f5f7;
+    --muted:#aab2bd;
+    --line:rgba(255,255,255,.13);
+    --accent:#4da3ff;
+}
+
+*{box-sizing:border-box}
+
+html,body{
+    width:100%;
+    height:100%;
+    margin:0;
+    overflow:hidden;
+    background:var(--bg);
+    color:var(--text);
+    font-family:Arial,"Yu Gothic UI","Yu Gothic",Meiryo,sans-serif;
+}
+
+body{
+    display:flex;
+    flex-direction:column;
+}
+
+#topBar{
+    height:64px;
+    flex:0 0 64px;
+    display:flex;
+    align-items:center;
+    gap:18px;
+    padding:0 16px;
+    background:var(--bar);
+    border-bottom:1px solid var(--line);
+    z-index:20;
+}
+
+.brand{
+    font-size:17px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+.folderControls{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+}
+
+.folderButton{
+    display:inline-block;
+    padding:9px 13px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:#2b323d;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.folderButton:hover{
+    background:#37414e;
+}
+
+.folderButton input{
+    display:none;
+}
+
+#folderName,
+#modelStatus{
+    color:var(--muted);
+    font-size:12px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+#folderName{
+    max-width:220px;
+}
+
+#modelStatus{
+    margin-left:auto;
+    max-width:35vw;
+}
+
+#viewerArea{
+    position:relative;
+    flex:1 1 auto;
+    min-height:0;
+}
+
+#canvasContainer{
+    position:absolute;
+    inset:0;
+}
+
+#canvasContainer canvas{
+    display:block;
+    width:100%;
+    height:100%;
+    touch-action:none;
+}
+
+#measurementPanel{
+    position:absolute;
+    top:18px;
+    right:18px;
+    width:270px;
+    padding:14px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--panel);
+    box-shadow:0 10px 28px rgba(0,0,0,.32);
+    z-index:10;
+}
+
+.panelTitle{
+    margin-bottom:12px;
+    font-weight:700;
+}
+
+.toolButton{
+    width:100%;
+    margin:0 0 8px;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:#2d3540;
+    color:var(--text);
+    cursor:pointer;
+}
+
+.toolButton:hover{
+    background:#3b4654;
+}
+
+.toolButton.active{
+    border-color:var(--accent);
+    box-shadow:inset 0 0 0 1px var(--accent);
+}
+
+.resultBox{
+    min-height:100px;
+    max-height:310px;
+    margin-top:6px;
+    padding:11px;
+    overflow:auto;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:rgba(0,0,0,.25);
+    font-size:13px;
+    line-height:1.6;
+}
+
+.resultBox small{
+    color:var(--muted);
+}
+
+#loadingPanel{
+    position:absolute;
+    left:18px;
+    bottom:18px;
+    width:min(430px,calc(100vw - 36px));
+    padding:12px;
+    border:1px solid var(--line);
+    border-radius:9px;
+    background:var(--panel);
+    z-index:11;
+}
+
+#loadingPanel.hidden{
+    display:none;
+}
+
+#loadingText{
+    margin-bottom:8px;
+    font-size:13px;
+}
+
+.progressTrack{
+    height:8px;
+    overflow:hidden;
+    border-radius:99px;
+    background:rgba(255,255,255,.12);
+}
+
+#progressBar{
+    width:0%;
+    height:100%;
+    background:var(--accent);
+}
+
+@media(max-width:780px){
+    #topBar{
+        gap:8px;
+    }
+
+    #folderName{
+        display:none;
+    }
+
+    #modelStatus{
+        display:none;
+    }
+
+    #measurementPanel{
+        top:10px;
+        right:10px;
+        width:min(250px,calc(100vw - 20px));
+    }
+}
+
+/* ===== 追加箇所：GLB Viewer CSS 終了 ===== */
