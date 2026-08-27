@@ -24,24 +24,7 @@
 <header id="topBar">
     <div class="brand">GLB Viewer</div>
 
-    <!-- ===== 追加箇所：フォルダ選択UI 開始 ===== -->
-    <div class="folderControls">
-        <label class="folderButton">
-            GLBフォルダを選択
-            <input
-                id="folderInput"
-                type="file"
-                webkitdirectory
-                multiple
-                accept=".glb"
-            >
-        </label>
-
-        <span id="folderName">未選択</span>
-    </div>
-    <!-- ===== 追加箇所：フォルダ選択UI 終了 ===== -->
-
-    <div id="modelStatus">フォルダを選択してください</div>
+    <div id="modelStatus">GLB自動読み込み待機中...</div>
 </header>
 
 <main id="viewerArea">
@@ -74,7 +57,7 @@
         </button>
 
         <div id="measurementResult" class="resultBox">
-            GLBフォルダを選択してください。
+            GLBを自動読み込みしています...
         </div>
 
     </aside>
