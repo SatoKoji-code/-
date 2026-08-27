@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GLB Viewer + Measurement</title>
+
+<link rel="stylesheet" href="./css/style.css">
+
+<!-- ===== 追加箇所：Three.js ローカルImportMap 開始 ===== -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "./lib/three.module.js",
+    "three/addons/": "./lib/addons/"
+  }
+}
+</script>
+<!-- ===== 追加箇所：Three.js ローカルImportMap 終了 ===== -->
+</head>
+
+<body>
+
+<header id="topBar">
+    <div class="brand">GLB Viewer</div>
+
+    <!-- ===== 追加箇所：フォルダ選択UI 開始 ===== -->
+    <div class="folderControls">
+        <label class="folderButton">
+            GLBフォルダを選択
+            <input
+                id="folderInput"
+                type="file"
+                webkitdirectory
+                multiple
+                accept=".glb"
+            >
+        </label>
+
+        <span id="folderName">未選択</span>
+    </div>
+    <!-- ===== 追加箇所：フォルダ選択UI 終了 ===== -->
+
+    <div id="modelStatus">フォルダを選択してください</div>
+</header>
+
+<main id="viewerArea">
+
+    <div id="canvasContainer"></div>
+
+    <!-- ===== 追加箇所：測定UI 開始 ===== -->
+    <aside id="measurementPanel">
+
+        <div class="panelTitle">測定</div>
+
+        <button id="measureDistanceButton" class="toolButton">
+            2点距離
+        </button>
+
+        <button id="measureSizeButton" class="toolButton">
+            XYZ寸法
+        </button>
+
+        <button id="measureAreaButton" class="toolButton">
+            表面積
+        </button>
+
+        <button id="measureVolumeButton" class="toolButton">
+            体積
+        </button>
+
+        <button id="clearMeasurementButton" class="toolButton secondary">
+            測定結果クリア
+        </button>
+
+        <div id="measurementResult" class="resultBox">
+            GLBフォルダを選択してください。
+        </div>
+
+    </aside>
+    <!-- ===== 追加箇所：測定UI 終了 ===== -->
+
+    <!-- ===== 追加箇所：ロード表示 開始 ===== -->
+    <div id="loadingPanel" class="hidden">
+        <div id="loadingText">読み込み中...</div>
+        <div class="progressTrack">
+            <div id="progressBar"></div>
+        </div>
+    </div>
+    <!-- ===== 追加箇所：ロード表示 終了 ===== -->
+
+</main>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
