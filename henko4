@@ -1,0 +1,346 @@
+============================================================
+【01_config.js】
+============================================================
+
+export const APP_CONFIG = {
+    MODEL: {
+        folderPath: "./models/",
+        tileName: "タイル",
+        startIndex: 1,
+        maxTiles: 5000,
+        batchSize: 50,
+        batchDisplayWaitMs: 500,
+        batchWaitMs: 50,
+        xUpToYUp: true
+    },
+    VIEW: {
+        background: 0x20242b,
+        ambientLightIntensity: 2.2,
+        hemisphereLightIntensity: 1.8,
+        directionalLightIntensity: 2.2,
+        fillLightIntensity: 1.4,
+        rotateSpeed: 0.55,
+        zoomSpeed: 1.0,
+        panSpeed: 0.8,
+        fov: 50,
+        near: 0.01,
+        far: 1000000,
+        showAxes: true
+    },
+    MEASUREMENT: {
+        unit: "m",
+        decimals: 3,
+        pointColor: 0xff4d4d,
+        lineColor: 0xff4d4d,
+        activePointColor: 0xffff00,
+        clickMoveTolerance: 5,
+        pointSizeRatio: 0.004,
+        lineClickThreshold: 0.03,
+        lineWidth: 4,
+        rangeColor: 0x00d8ff,
+        rangeOpacity: 0.15,
+        cylinderSubdivisionDepth: 7
+    }
+};
+
+
+============================================================
+【02_loader.js】
+============================================================
+
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { APP_CONFIG } from "./config.js";
+
+export const modelGroup = new THREE.Group();
+modelGroup.name = "LoadedGLBModelGroup";
+const loader = new GLTFLoader();
+
+export function clearLoadedModels(){
+    for(let i=modelGroup.children.length-1;i>=0;i--){
+        const child=modelGroup.children[i];
+        modelGroup.remove(child);
+        disposeObject3D(child);
+    }
+}
+
+export async function loadSequentialTiles(callbacks={}){
+    const {
+        onStatus=()=>{},
+        onFileLoaded=()=>{},
+        onBatchLoaded=async()=>{},
+        onComplete=()=>{},
+        onError=()=>{}
+    }=callbacks;
+
+    clearLoadedModels();
+
+    const cfg=APP_CONFIG.MODEL;
+    const start=Math.max(1,Number(cfg.startIndex)||1);
+    const max=Math.max(1,Number(cfg.maxTiles)||5000);
+    const batchSize=Math.max(1,Number(cfg.batchSize)||50);
+    const batchDisplayWaitMs=Math.max(0,Number(cfg.batchDisplayWaitMs)||500);
+
+    let loadedCount=0;
+    let batchStartNumber=start;
+    let lastLoadedNumber=null;
+
+    for(let number=start;number<start+max;number++){
+        onStatus(`タイル${number}を確認中...`);
+
+        const result=await tryLoadTile(number);
+
+        // 最初の欠番で終了
+        if(result.status==="missing") break;
+
+        if(result.status==="error"){
+            onError({number,error:result.error});
+            throw result.error;
+        }
+
+        const root=result.root;
+        root.name=result.fileName;
+        prepareRoot(root);
+        modelGroup.add(root);
+        root.updateMatrixWorld(true);
+
+        loadedCount++;
+        lastLoadedNumber=number;
+
+        onFileLoaded({
+            number,
+            fileName:result.fileName,
+            root,
+            loadedCount
+        });
+
+        // ====================================================
+        // 50個ごとにロードを完全に停止
+        // main.js側のカメラ調整＋描画が終わるまで待つ
+        // ====================================================
+        if(loadedCount%batchSize===0){
+            const batchEndNumber=number;
+
+            onStatus(
+                `タイル${batchStartNumber}～${batchEndNumber}読み込み完了。画面表示中...`
+            );
+
+            await onBatchLoaded({
+                batchStartNumber,
+                batchEndNumber,
+                batchCount:batchSize,
+                loadedCount,
+                isLastBatch:false
+            });
+
+            // 実際のブラウザ描画フレームを待つ
+            await waitForBrowserRender();
+
+            // 50個表示された状態を人間の目で確認できる時間保持
+            await wait(batchDisplayWaitMs);
+
+            onStatus(
+                `${loadedCount}個表示完了。タイル${number+1}から読み込み再開...`
+            );
+
+            batchStartNumber=number+1;
+        }
+    }
+
+    if(loadedCount===0){
+        throw new Error(`最初のGLBが見つかりません。確認先: ${folderPath()}`);
+    }
+
+    // 最後が50個未満の場合も必ず画面へ表示
+    const remainder=loadedCount%batchSize;
+
+    if(remainder!==0 && lastLoadedNumber!==null){
+        onStatus(
+            `タイル${batchStartNumber}～${lastLoadedNumber}読み込み完了。最終表示中...`
+        );
+
+        await onBatchLoaded({
+            batchStartNumber,
+            batchEndNumber:lastLoadedNumber,
+            batchCount:remainder,
+            loadedCount,
+            isLastBatch:true
+        });
+
+        await waitForBrowserRender();
+        await wait(batchDisplayWaitMs);
+    }
+
+    onComplete({tileCount:loadedCount});
+    return {tileCount:loadedCount};
+}
+
+function waitForBrowserRender(){
+    return new Promise(resolve=>{
+        requestAnimationFrame(()=>{
+            requestAnimationFrame(()=>{
+                requestAnimationFrame(resolve);
+            });
+        });
+    });
+}
+
+function wait(ms){
+    return new Promise(resolve=>setTimeout(resolve,ms));
+}
+
+async function tryLoadTile(number){
+    const cfg=APP_CONFIG.MODEL;
+    const candidates=[`${cfg.tileName}${number}.glb`,`${cfg.tileName} ${number}.glb`];
+    for(const fileName of candidates){
+        const url=buildFileUrl(fileName);
+        try{
+            const response=await fetch(url,{method:"HEAD",cache:"no-store"});
+            if(!response.ok) continue;
+            const root=await loadOneGLB(url);
+            return {status:"loaded",root,fileName,url};
+        }catch(error){
+            try{
+                const root=await loadOneGLB(url);
+                return {status:"loaded",root,fileName,url};
+            }catch(loadError){
+                if(isMissingError(loadError)) continue;
+                return {status:"error",error:loadError};
+            }
+        }
+    }
+    return {status:"missing"};
+}
+function loadOneGLB(url){
+    return new Promise((resolve,reject)=>loader.load(url,gltf=>{
+        const root=gltf.scene||gltf.scenes?.[0];
+        if(!root){reject(new Error(`GLB内にsceneがありません: ${url}`));return;}
+        resolve(root);
+    },undefined,reject));
+}
+function folderPath(){let folder=String(APP_CONFIG.MODEL.folderPath||"./models/");if(!folder.endsWith("/")) folder+="/";return folder;}
+function buildFileUrl(fileName){return folderPath()+encodeURIComponent(fileName);}
+function isMissingError(error){const text=String(error?.message||error||"");return /404|not found|failed to fetch|fetch/i.test(text);}
+function prepareRoot(root){
+    if(APP_CONFIG.MODEL.xUpToYUp) root.rotation.z+=Math.PI/2;
+    root.traverse(child=>{if(!child.isMesh)return;child.castShadow=false;child.receiveShadow=false;child.userData.measurementTarget=true;});
+    root.updateMatrixWorld(true);
+}
+function disposeObject3D(root){
+    root.traverse(object=>{
+        if(object.geometry) object.geometry.dispose();
+        const materials=Array.isArray(object.material)?object.material:[object.material];
+        for(const material of materials){if(!material)continue;for(const key of Object.keys(material)){const value=material[key];if(value&&value.isTexture)value.dispose();}material.dispose();}
+    });
+}
+
+
+============================================================
+【03_main.js】
+============================================================
+
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { APP_CONFIG } from "./config.js";
+import { modelGroup, loadSequentialTiles } from "./loader.js";
+import { MeasurementManager } from "./measurement.js";
+
+const canvasContainer=document.getElementById("canvasContainer");
+const modelStatus=document.getElementById("modelStatus");
+const loadingPanel=document.getElementById("loadingPanel");
+const loadingText=document.getElementById("loadingText");
+const progressBar=document.getElementById("progressBar");
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(APP_CONFIG.VIEW.background);
+const camera=new THREE.PerspectiveCamera(APP_CONFIG.VIEW.fov,1,APP_CONFIG.VIEW.near,APP_CONFIG.VIEW.far);
+camera.position.set(5,5,5);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.shadowMap.enabled=false;
+canvasContainer.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+controls.rotateSpeed=APP_CONFIG.VIEW.rotateSpeed;
+controls.zoomSpeed=APP_CONFIG.VIEW.zoomSpeed;
+controls.panSpeed=APP_CONFIG.VIEW.panSpeed;
+scene.add(new THREE.AmbientLight(0xffffff,APP_CONFIG.VIEW.ambientLightIntensity));
+scene.add(new THREE.HemisphereLight(0xffffff,0x777777,APP_CONFIG.VIEW.hemisphereLightIntensity));
+const directional=new THREE.DirectionalLight(0xffffff,APP_CONFIG.VIEW.directionalLightIntensity);directional.position.set(10,20,10);directional.castShadow=false;scene.add(directional);
+const fillLight=new THREE.DirectionalLight(0xffffff,APP_CONFIG.VIEW.fillLightIntensity);fillLight.position.set(-10,8,-10);fillLight.castShadow=false;scene.add(fillLight);
+scene.add(modelGroup);
+if(APP_CONFIG.VIEW.showAxes) scene.add(new THREE.AxesHelper(1));
+new MeasurementManager({scene,camera,renderer,controls,modelGroup});
+
+async function autoLoadModels(){
+    showLoading("固定パスからGLBを読み込んでいます...");
+    try{
+        const result=await loadSequentialTiles({
+            onStatus:text=>{modelStatus.textContent=text;loadingText.textContent=text;},
+            onFileLoaded:({fileName,loadedCount})=>{
+                modelStatus.textContent=`${loadedCount}個読込済み：${fileName}`;
+                const batchSize=Math.max(1,Number(APP_CONFIG.MODEL.batchSize)||50);
+                const inBatch=loadedCount%batchSize;
+                progressBar.style.width=`${inBatch===0?100:Math.max(8,(inBatch/batchSize)*100)}%`;
+            },
+
+            onBatchLoaded:async({
+                batchStartNumber,
+                batchEndNumber,
+                loadedCount
+            })=>{
+                // ここまで読み込んだGLBの行列を確定
+                modelGroup.updateMatrixWorld(true);
+
+                // ★重要：50個ごとに現在のモデル範囲へカメラを合わせる
+                fitCameraToObject(modelGroup);
+
+                // OrbitControlsの状態を反映
+                controls.update();
+
+                // ★重要：50個までを明示的に画面描画
+                renderer.render(scene,camera);
+
+                modelStatus.textContent=
+                    `${loadedCount}個表示中（タイル${batchStartNumber}～${batchEndNumber}）`;
+
+                loadingText.textContent=
+                    `${loadedCount}個を画面に表示しました`;
+
+                progressBar.style.width="100%";
+
+                // DOM表示更新 → Three.js描画の順に複数フレーム確保
+                await nextFrame();
+                renderer.render(scene,camera);
+                await nextFrame();
+                renderer.render(scene,camera);
+                await nextFrame();
+            },
+
+            onComplete:({tileCount})=>{modelStatus.textContent=`${tileCount}個のGLBを読み込みました`;loadingText.textContent=`読み込み完了：${tileCount}個`;progressBar.style.width="100%";},
+            onError:({number,error})=>console.error(`タイル${number} 読み込みエラー`,error)
+        });
+        fitCameraToObject(modelGroup);
+        document.getElementById("measurementResult").innerHTML=`<b>読み込み完了</b><br><br>${result.tileCount}個のGLBを読み込みました。`;
+        setTimeout(hideLoading,700);
+    }catch(error){
+        console.error(error);modelStatus.textContent="GLB読み込みエラー";loadingText.textContent="読み込みエラー";progressBar.style.width="100%";
+        document.getElementById("measurementResult").innerHTML=`<b>読み込みエラー</b><br><br>${String(error.message||error)}`;
+    }
+}
+function fitCameraToObject(object){
+    object.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(object);if(box.isEmpty())return;
+    const center=box.getCenter(new THREE.Vector3());const size=box.getSize(new THREE.Vector3());const maxSize=Math.max(size.x,size.y,size.z,0.001);const fov=THREE.MathUtils.degToRad(camera.fov);let distance=maxSize/(2*Math.tan(fov/2));distance*=1.5;
+    camera.position.set(center.x+distance,center.y+distance*0.7,center.z+distance);camera.near=Math.max(distance/10000,0.001);camera.far=Math.max(distance*100,1000);camera.updateProjectionMatrix();controls.target.copy(center);controls.update();
+}
+function nextFrame(){
+    return new Promise(resolve=>requestAnimationFrame(resolve));
+}
+
+function resize(){const width=canvasContainer.clientWidth;const height=canvasContainer.clientHeight;if(width<=0||height<=0)return;camera.aspect=width/height;camera.updateProjectionMatrix();renderer.setSize(width,height,false);}
+window.addEventListener("resize",resize);resize();
+function showLoading(text){loadingPanel.classList.remove("hidden");loadingText.textContent=text;progressBar.style.width="8%";}
+function hideLoading(){loadingPanel.classList.add("hidden");}
+function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}
+animate();
+autoLoadModels();
