@@ -1,0 +1,800 @@
+============================================================
+FILE: 01_index.html.txt
+============================================================
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GLB Viewer + Measurement</title>
+<link rel="stylesheet" href="./css/style.css">
+<script type="importmap">{"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/addons/"}}</script></head>
+<body><header id="topBar"><div class="brand">GLB Viewer</div><div id="modelStatus">GLB自動読み込み待機中...</div></header>
+<main id="viewerArea"><div id="canvasContainer"></div><aside id="measurementPanel"><div class="panelTitle">測定</div>
+<button id="measureDistanceButton" class="toolButton">2点距離</button>
+<button id="measureSizeButton" class="toolButton">XYZ寸法</button>
+<button id="measureAreaButton" class="toolButton">表面積</button>
+<div id="areaRangeControls" class="hidden">
+<hr><div><b>測定範囲</b></div>
+<button id="rangeBoxButton" class="toolButton">直方体</button><button id="rangeCylinderButton" class="toolButton">円柱</button>
+<div><button id="rangeMoveButton" class="toolButton">移動</button><button id="rangeRotateButton" class="toolButton">回転</button><button id="rangeScaleButton" class="toolButton">サイズ</button></div>
+<button id="executeAreaButton" class="toolButton">範囲内を測定</button><hr>
+</div>
+<button id="measureVolumeButton" class="toolButton">体積</button>
+<button id="clearMeasurementButton" class="toolButton secondary">測定結果クリア</button>
+<div id="measurementResult" class="resultBox">GLBを自動読み込みしています...</div></aside>
+<div id="loadingPanel" class="hidden"><div id="loadingText">読み込み中...</div><div class="progressTrack"><div id="progressBar"></div></div></div></main>
+<script type="module" src="./js/main.js"></script></body></html>
+
+
+============================================================
+FILE: 02_style.css.txt
+============================================================
+/* ===== 追加箇所：GLB Viewer CSS 開始 ===== */
+
+:root{
+    --bg:#12161c;
+    --bar:#191e26;
+    --panel:rgba(25,30,38,.94);
+    --text:#f3f5f7;
+    --muted:#aab2bd;
+    --line:rgba(255,255,255,.13);
+    --accent:#4da3ff;
+}
+
+*{box-sizing:border-box}
+
+html,body{
+    width:100%;
+    height:100%;
+    margin:0;
+    overflow:hidden;
+    background:var(--bg);
+    color:var(--text);
+    font-family:Arial,"Yu Gothic UI","Yu Gothic",Meiryo,sans-serif;
+}
+
+body{
+    display:flex;
+    flex-direction:column;
+}
+
+#topBar{
+    height:64px;
+    flex:0 0 64px;
+    display:flex;
+    align-items:center;
+    gap:18px;
+    padding:0 16px;
+    background:var(--bar);
+    border-bottom:1px solid var(--line);
+    z-index:20;
+}
+
+.brand{
+    font-size:17px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+.folderControls{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+}
+
+.folderButton{
+    display:inline-block;
+    padding:9px 13px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:#2b323d;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.folderButton:hover{
+    background:#37414e;
+}
+
+.folderButton input{
+    display:none;
+}
+
+#folderName,
+#modelStatus{
+    color:var(--muted);
+    font-size:12px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+#folderName{
+    max-width:220px;
+}
+
+#modelStatus{
+    margin-left:auto;
+    max-width:35vw;
+}
+
+#viewerArea{
+    position:relative;
+    flex:1 1 auto;
+    min-height:0;
+}
+
+#canvasContainer{
+    position:absolute;
+    inset:0;
+}
+
+#canvasContainer canvas{
+    display:block;
+    width:100%;
+    height:100%;
+    touch-action:none;
+}
+
+#measurementPanel{
+    position:absolute;
+    top:18px;
+    right:18px;
+    width:270px;
+    padding:14px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--panel);
+    box-shadow:0 10px 28px rgba(0,0,0,.32);
+    z-index:10;
+}
+
+.panelTitle{
+    margin-bottom:12px;
+    font-weight:700;
+}
+
+.toolButton{
+    width:100%;
+    margin:0 0 8px;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:#2d3540;
+    color:var(--text);
+    cursor:pointer;
+}
+
+.toolButton:hover{
+    background:#3b4654;
+}
+
+.toolButton.active{
+    border-color:var(--accent);
+    box-shadow:inset 0 0 0 1px var(--accent);
+}
+
+.resultBox{
+    min-height:100px;
+    max-height:310px;
+    margin-top:6px;
+    padding:11px;
+    overflow:auto;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:rgba(0,0,0,.25);
+    font-size:13px;
+    line-height:1.6;
+}
+
+.resultBox small{
+    color:var(--muted);
+}
+
+#loadingPanel{
+    position:absolute;
+    left:18px;
+    bottom:18px;
+    width:min(430px,calc(100vw - 36px));
+    padding:12px;
+    border:1px solid var(--line);
+    border-radius:9px;
+    background:var(--panel);
+    z-index:11;
+}
+
+#loadingPanel.hidden{
+    display:none;
+}
+
+#loadingText{
+    margin-bottom:8px;
+    font-size:13px;
+}
+
+.progressTrack{
+    height:8px;
+    overflow:hidden;
+    border-radius:99px;
+    background:rgba(255,255,255,.12);
+}
+
+#progressBar{
+    width:0%;
+    height:100%;
+    background:var(--accent);
+}
+
+@media(max-width:780px){
+    #topBar{
+        gap:8px;
+    }
+
+    #folderName{
+        display:none;
+    }
+
+    #modelStatus{
+        display:none;
+    }
+
+    #measurementPanel{
+        top:10px;
+        right:10px;
+        width:min(250px,calc(100vw - 20px));
+    }
+}
+
+/* ===== 追加箇所：GLB Viewer CSS 終了 ===== */
+
+
+============================================================
+FILE: 03_config.js.txt
+============================================================
+export const APP_CONFIG = {
+    MODEL: {
+        folderPath: "./models/",
+        tileName: "タイル",
+        startIndex: 1,
+        maxTiles: 5000,
+        batchSize: 50,
+        batchWaitMs: 50,
+        xUpToYUp: true
+    },
+    VIEW: {
+        background: 0x20242b,
+        ambientLightIntensity: 2.2,
+        hemisphereLightIntensity: 1.8,
+        directionalLightIntensity: 2.2,
+        fillLightIntensity: 1.4,
+        rotateSpeed: 0.55,
+        zoomSpeed: 1.0,
+        panSpeed: 0.8,
+        fov: 50,
+        near: 0.01,
+        far: 1000000,
+        showAxes: true
+    },
+    MEASUREMENT: {
+        unit: "m",
+        decimals: 3,
+        pointColor: 0xff4d4d,
+        lineColor: 0xff4d4d,
+        activePointColor: 0xffff00,
+        clickMoveTolerance: 5,
+        pointSizeRatio: 0.004,
+        lineClickThreshold: 0.03,
+        lineWidth: 4,
+        rangeColor: 0x00d8ff,
+        rangeOpacity: 0.15,
+        cylinderSubdivisionDepth: 7
+    }
+};
+
+
+============================================================
+FILE: 04_loader.js.txt
+============================================================
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { APP_CONFIG } from "./config.js";
+
+export const modelGroup = new THREE.Group();
+modelGroup.name = "LoadedGLBModelGroup";
+const loader = new GLTFLoader();
+
+export function clearLoadedModels(){
+    for(let i=modelGroup.children.length-1;i>=0;i--){
+        const child=modelGroup.children[i];
+        modelGroup.remove(child);
+        disposeObject3D(child);
+    }
+}
+
+export async function loadSequentialTiles(callbacks={}){
+    const {onStatus=()=>{},onFileLoaded=()=>{},onBatchLoaded=async()=>{},onComplete=()=>{},onError=()=>{}}=callbacks;
+    clearLoadedModels();
+    const cfg=APP_CONFIG.MODEL;
+    const start=Math.max(1,Number(cfg.startIndex)||1);
+    const max=Math.max(1,Number(cfg.maxTiles)||5000);
+    const batchSize=Math.max(1,Number(cfg.batchSize)||50);
+    const batchWaitMs=Math.max(0,Number(cfg.batchWaitMs)||0);
+    let loadedCount=0;
+    let batchStartNumber=start;
+
+    for(let number=start;number<start+max;number++){
+        onStatus(`タイル${number}を確認中...（現在 ${loadedCount}個読み込み済み）`);
+        const result=await tryLoadTile(number);
+        if(result.status==="missing"){
+            if(loadedCount>0 && loadedCount%batchSize!==0){
+                const batchCount=loadedCount%batchSize;
+                const batchEndNumber=number-1;
+                onStatus(`タイル${batchStartNumber}～${batchEndNumber} 読み込み完了。表示処理中...`);
+                await onBatchLoaded({batchStartNumber,batchEndNumber,batchCount,loadedCount,isLastBatch:true});
+                await waitForBrowserRender();
+            }
+            break;
+        }
+        if(result.status==="error"){
+            onError({number,error:result.error});
+            throw result.error;
+        }
+        const root=result.root;
+        root.name=result.fileName;
+        prepareRoot(root);
+        modelGroup.add(root);
+        root.updateMatrixWorld(true);
+        loadedCount++;
+        onFileLoaded({number,fileName:result.fileName,root,loadedCount});
+
+        if(loadedCount%batchSize===0){
+            const batchEndNumber=number;
+            onStatus(`タイル${batchStartNumber}～${batchEndNumber} 読み込み完了。表示処理中...`);
+            await onBatchLoaded({batchStartNumber,batchEndNumber,batchCount:batchSize,loadedCount,isLastBatch:false});
+            await waitForBrowserRender();
+            batchStartNumber=number+1;
+            onStatus(`${loadedCount}個表示完了。タイル${number+1}から読み込みを再開します...`);
+            if(batchWaitMs>0) await wait(batchWaitMs);
+        }
+    }
+    if(loadedCount===0) throw new Error(`最初のGLBが見つかりません。確認先: ${folderPath()}`);
+    onComplete({tileCount:loadedCount});
+    return {tileCount:loadedCount};
+}
+
+function waitForBrowserRender(){
+    return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+}
+function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+
+async function tryLoadTile(number){
+    const cfg=APP_CONFIG.MODEL;
+    const candidates=[`${cfg.tileName}${number}.glb`,`${cfg.tileName} ${number}.glb`];
+    for(const fileName of candidates){
+        const url=buildFileUrl(fileName);
+        try{
+            const response=await fetch(url,{method:"HEAD",cache:"no-store"});
+            if(!response.ok) continue;
+            const root=await loadOneGLB(url);
+            return {status:"loaded",root,fileName,url};
+        }catch(error){
+            try{
+                const root=await loadOneGLB(url);
+                return {status:"loaded",root,fileName,url};
+            }catch(loadError){
+                if(isMissingError(loadError)) continue;
+                return {status:"error",error:loadError};
+            }
+        }
+    }
+    return {status:"missing"};
+}
+function loadOneGLB(url){
+    return new Promise((resolve,reject)=>loader.load(url,gltf=>{
+        const root=gltf.scene||gltf.scenes?.[0];
+        if(!root){reject(new Error(`GLB内にsceneがありません: ${url}`));return;}
+        resolve(root);
+    },undefined,reject));
+}
+function folderPath(){let folder=String(APP_CONFIG.MODEL.folderPath||"./models/");if(!folder.endsWith("/")) folder+="/";return folder;}
+function buildFileUrl(fileName){return folderPath()+encodeURIComponent(fileName);}
+function isMissingError(error){const text=String(error?.message||error||"");return /404|not found|failed to fetch|fetch/i.test(text);}
+function prepareRoot(root){
+    if(APP_CONFIG.MODEL.xUpToYUp) root.rotation.z+=Math.PI/2;
+    root.traverse(child=>{if(!child.isMesh)return;child.castShadow=false;child.receiveShadow=false;child.userData.measurementTarget=true;});
+    root.updateMatrixWorld(true);
+}
+function disposeObject3D(root){
+    root.traverse(object=>{
+        if(object.geometry) object.geometry.dispose();
+        const materials=Array.isArray(object.material)?object.material:[object.material];
+        for(const material of materials){if(!material)continue;for(const key of Object.keys(material)){const value=material[key];if(value&&value.isTexture)value.dispose();}material.dispose();}
+    });
+}
+
+
+============================================================
+FILE: 05_measurement.js.txt
+============================================================
+import * as THREE from "three";
+import { Line2 } from "three/addons/lines/Line2.js";
+import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import { LineGeometry } from "three/addons/lines/LineGeometry.js";
+import { APP_CONFIG } from "./config.js";
+import { MeasurementRange } from "./measurementRange.js";
+import { calculateAreaInRange } from "./areaMeasurement.js";
+
+export class MeasurementManager {
+    constructor({ scene, camera, renderer, controls, modelGroup }) {
+        Object.assign(this,{scene,camera,renderer,controls,modelGroup});
+        this.raycaster=new THREE.Raycaster(); this.pointer=new THREE.Vector2();
+        this.raycaster.params.Line.threshold=APP_CONFIG.MEASUREMENT.lineClickThreshold;
+        this.mode=null; this.pendingPoints=[]; this.pendingMarkers=[]; this.measurements=[]; this.visualObjects=[];
+        this.pointerDownPosition=null; this.dragState=null;
+        this.resultElement=document.getElementById("measurementResult");
+        this.distanceButton=document.getElementById("measureDistanceButton");
+        this.range=new MeasurementRange({scene,camera,renderer,controls,modelGroup});
+        this.bindUI();
+    }
+    bindUI(){
+        document.getElementById("measureDistanceButton").addEventListener("click",()=>this.startDistance());
+        document.getElementById("measureSizeButton").addEventListener("click",()=>this.measureSize());
+        document.getElementById("measureAreaButton").addEventListener("click",()=>this.startArea());
+        document.getElementById("measureVolumeButton").addEventListener("click",()=>this.measureVolume());
+        document.getElementById("clearMeasurementButton").addEventListener("click",()=>this.clear());
+        document.getElementById("rangeBoxButton")?.addEventListener("click",()=>this.createRange("box"));
+        document.getElementById("rangeCylinderButton")?.addEventListener("click",()=>this.createRange("cylinder"));
+        document.getElementById("rangeMoveButton")?.addEventListener("click",()=>this.range.setMode("translate"));
+        document.getElementById("rangeRotateButton")?.addEventListener("click",()=>this.range.setMode("rotate"));
+        document.getElementById("rangeScaleButton")?.addEventListener("click",()=>this.range.setMode("scale"));
+        document.getElementById("executeAreaButton")?.addEventListener("click",()=>this.executeArea());
+        this.renderer.domElement.addEventListener("pointerdown",e=>this.onPointerDown(e));
+        this.renderer.domElement.addEventListener("pointermove",e=>this.onPointerMove(e));
+        this.renderer.domElement.addEventListener("pointerup",e=>this.onPointerUp(e));
+        this.renderer.domElement.addEventListener("pointercancel",e=>this.endDrag(e));
+    }
+    hasModel(){return this.modelGroup&&this.modelGroup.children.length>0;}
+    startDistance(){ if(!this.hasModel())return this.show("GLBモデルを先に読み込んでください。"); this.mode="distance";this.pendingPoints=[];this.pendingMarkers=[];this.distanceButton.classList.add("active");this.show("<b>2点距離</b><br><br>1点目をクリックしてください。<br><br><small>作成後：赤い線をクリックすると測定結果を表示します。<br>赤い点は後からドラッグして移動できます。</small>");}
+    startArea(){ this.stopDistanceMode(); if(!this.hasModel())return this.show("GLBモデルを先に読み込んでください。"); this.mode="area"; document.getElementById("areaRangeControls")?.classList.remove("hidden"); this.show("<b>表面積</b><br><br>直方体または円柱の範囲を作成し、移動・回転・サイズ変更後に「範囲内を測定」を押してください。"); }
+    createRange(type){ if(!this.hasModel())return; this.range.create(type); this.show(`<b>表面積</b><br><br>${type==="box"?"直方体":"円柱"}の測定範囲を作成しました。`); }
+    executeArea(){ const r=this.range.getRange(); if(!r)return this.show("先に測定範囲を作成してください。"); this.show("<b>表面積</b><br><br>計算中..."); setTimeout(()=>{ const result=calculateAreaInRange(this.modelGroup,r,APP_CONFIG.AREA_RANGE||{}); const u=APP_CONFIG.MEASUREMENT.unit; this.show(`<b>範囲内の表面積</b><br><br>${this.f(result.area)} ${u}²<br><br>対象Mesh数： ${result.meshCount}<br>対象三角形数： ${result.triangleCount}`); },0); }
+    onPointerDown(event){this.pointerDownPosition={x:event.clientX,y:event.clientY};const hit=this.pickMeasurementMarker(event);if(!hit)return;const marker=hit.object,measurement=marker.userData.measurement;if(!measurement)return;this.dragState={measurement,pointIndex:marker.userData.pointIndex,marker};marker.material.color.setHex(APP_CONFIG.MEASUREMENT.activePointColor);this.controls.enabled=false;this.renderer.domElement.setPointerCapture?.(event.pointerId);event.preventDefault();}
+    onPointerMove(event){if(!this.dragState)return;const point=this.pickModelPoint(event);if(!point)return;const {measurement,pointIndex,marker}=this.dragState;measurement.points[pointIndex].copy(point);marker.position.copy(point);this.updateMeasurementLine(measurement);this.show("<b>測定点を移動中</b><br><br>マウスを離すと位置を確定します。");}
+    onPointerUp(event){if(this.dragState){this.endDrag(event);this.show("<b>測定点を移動しました。</b><br><br>赤い測定線をクリックすると最新の測定結果を表示します。");return;}if(!this.pointerDownPosition)return;const dx=event.clientX-this.pointerDownPosition.x,dy=event.clientY-this.pointerDownPosition.y;if(Math.sqrt(dx*dx+dy*dy)>APP_CONFIG.MEASUREMENT.clickMoveTolerance)return;const lineHit=this.pickMeasurementLine(event);if(lineHit){this.showMeasurementResult(lineHit.object.userData.measurement);return;}if(this.mode!=="distance")return;const point=this.pickModelPoint(event);if(!point)return;const marker=this.createPointMarker(point);this.pendingPoints.push(point.clone());this.pendingMarkers.push(marker);if(this.pendingPoints.length===1){this.show("<b>2点距離</b><br><br>1点目を設定しました。<br>2点目をクリックしてください。");return;}if(this.pendingPoints.length===2){const m=this.createMeasurement(this.pendingPoints[0],this.pendingPoints[1],this.pendingMarkers[0],this.pendingMarkers[1]);this.measurements.push(m);this.pendingPoints=[];this.pendingMarkers=[];this.show("<b>測定線を作成しました。</b><br><br>赤い線をクリックすると測定結果を表示します。<br>赤い点はドラッグして位置を変更できます。");}}
+    endDrag(event){if(!this.dragState)return;this.dragState.marker.material.color.setHex(APP_CONFIG.MEASUREMENT.pointColor);this.dragState=null;this.controls.enabled=true;if(event)this.renderer.domElement.releasePointerCapture?.(event.pointerId);}
+    createMeasurement(p1,p2,m1,m2){const m={points:[p1.clone(),p2.clone()],markers:[m1,m2],line:null};m1.userData.measurement=m;m1.userData.pointIndex=0;m2.userData.measurement=m;m2.userData.pointIndex=1;m.line=this.createLine(m.points[0],m.points[1],m);return m;}
+    updateMeasurementLine(m){const p1=m.points[0],p2=m.points[1];m.line.geometry.setPositions([p1.x,p1.y,p1.z,p2.x,p2.y,p2.z]);m.line.computeLineDistances();}
+    showMeasurementResult(m){if(!m)return;const p1=m.points[0],p2=m.points[1],d=p1.distanceTo(p2),dx=Math.abs(p2.x-p1.x),dy=Math.abs(p2.y-p1.y),dz=Math.abs(p2.z-p1.z),u=APP_CONFIG.MEASUREMENT.unit;this.show(`<b>2点距離</b><br><br>距離： ${this.f(d)} ${u}<br><br>ΔX： ${this.f(dx)} ${u}<br>ΔY： ${this.f(dy)} ${u}<br>ΔZ： ${this.f(dz)} ${u}`);}
+    updatePointer(event){const r=this.renderer.domElement.getBoundingClientRect();this.pointer.x=((event.clientX-r.left)/r.width)*2-1;this.pointer.y=-((event.clientY-r.top)/r.height)*2+1;this.raycaster.setFromCamera(this.pointer,this.camera);}
+    pickModelPoint(event){this.updatePointer(event);const meshes=[];this.modelGroup.traverse(c=>{if(c.isMesh&&c.visible)meshes.push(c);});const h=this.raycaster.intersectObjects(meshes,false);return h.length?h[0].point.clone():null;}
+    pickMeasurementMarker(event){this.updatePointer(event);const h=this.raycaster.intersectObjects(this.measurements.flatMap(m=>m.markers).filter(Boolean),false);return h.length?h[0]:null;}
+    pickMeasurementLine(event){this.updatePointer(event);const lines=this.measurements.map(m=>m.line).filter(Boolean);const h=this.raycaster.intersectObjects(lines,false);return h.length?h[0]:null;}
+    createPointMarker(position){const radius=Math.max(this.camera.position.distanceTo(position)*APP_CONFIG.MEASUREMENT.pointSizeRatio,0.001);const marker=new THREE.Mesh(new THREE.SphereGeometry(radius,16,16),new THREE.MeshBasicMaterial({color:APP_CONFIG.MEASUREMENT.pointColor,depthTest:false}));marker.position.copy(position);marker.renderOrder=1001;this.scene.add(marker);this.visualObjects.push(marker);return marker;}
+    createLine(p1,p2,measurement){const geometry=new LineGeometry();geometry.setPositions([p1.x,p1.y,p1.z,p2.x,p2.y,p2.z]);const material=new LineMaterial({color:APP_CONFIG.MEASUREMENT.lineColor,linewidth:APP_CONFIG.MEASUREMENT.lineWidth,worldUnits:false,depthTest:false});material.resolution.set(this.renderer.domElement.clientWidth,this.renderer.domElement.clientHeight);const line=new Line2(geometry,material);line.computeLineDistances();line.renderOrder=1000;line.userData.measurement=measurement;this.scene.add(line);this.visualObjects.push(line);return line;}
+    measureSize(){this.stopDistanceMode();if(!this.hasModel())return this.show("GLBモデルを先に読み込んでください。");this.modelGroup.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(this.modelGroup);if(box.isEmpty())return this.show("寸法を取得できませんでした。");const s=box.getSize(new THREE.Vector3()),u=APP_CONFIG.MEASUREMENT.unit;this.show(`<b>XYZ寸法</b><br><br>X： ${this.f(s.x)} ${u}<br>Y： ${this.f(s.y)} ${u}<br>Z： ${this.f(s.z)} ${u}`);}
+    measureVolume(){this.stopDistanceMode();if(!this.hasModel())return this.show("GLBモデルを先に読み込んでください。");this.modelGroup.updateMatrixWorld(true);let total=0,count=0;this.modelGroup.traverse(mesh=>{if(!mesh.isMesh||!mesh.visible)return;total+=Math.abs(calculateMeshSignedVolume(mesh));count++;});const u=APP_CONFIG.MEASUREMENT.unit;this.show(`<b>体積</b><br><br>${this.f(total)} ${u}³<br><br>対象Mesh数： ${count}<br><br><small>※現在の体積ボタンは従来仕様です。次段階で同じ範囲指定へ接続できます。</small>`);}
+    clear(){this.stopDistanceMode();this.endDrag();this.range.clear();document.getElementById("areaRangeControls")?.classList.add("hidden");this.pendingPoints=[];this.pendingMarkers=[];for(const o of this.visualObjects){this.scene.remove(o);o.geometry?.dispose();o.material?.dispose();}this.visualObjects=[];this.measurements=[];this.show("測定結果をクリアしました。");}
+    stopDistanceMode(){this.mode=null;this.pendingPoints=[];this.pendingMarkers=[];this.distanceButton.classList.remove("active");}
+    show(html){this.resultElement.innerHTML=html;}
+    f(v){return Number(v).toFixed(APP_CONFIG.MEASUREMENT.decimals);}
+}
+
+function calculateMeshSignedVolume(mesh){const g=mesh.geometry,p=g?.attributes?.position;if(!p)return 0;const idx=g.index,a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),cross=new THREE.Vector3();let volume=0;const add=(i1,i2,i3)=>{a.fromBufferAttribute(p,i1).applyMatrix4(mesh.matrixWorld);b.fromBufferAttribute(p,i2).applyMatrix4(mesh.matrixWorld);c.fromBufferAttribute(p,i3).applyMatrix4(mesh.matrixWorld);cross.crossVectors(b,c);volume+=a.dot(cross)/6;};if(idx){for(let i=0;i+2<idx.count;i+=3)add(idx.getX(i),idx.getX(i+1),idx.getX(i+2));}else{for(let i=0;i+2<p.count;i+=3)add(i,i+1,i+2);}return volume;}
+
+
+============================================================
+FILE: 06_main.js.txt
+============================================================
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { APP_CONFIG } from "./config.js";
+import { modelGroup, loadSequentialTiles } from "./loader.js";
+import { MeasurementManager } from "./measurement.js";
+
+const canvasContainer=document.getElementById("canvasContainer");
+const modelStatus=document.getElementById("modelStatus");
+const loadingPanel=document.getElementById("loadingPanel");
+const loadingText=document.getElementById("loadingText");
+const progressBar=document.getElementById("progressBar");
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(APP_CONFIG.VIEW.background);
+const camera=new THREE.PerspectiveCamera(APP_CONFIG.VIEW.fov,1,APP_CONFIG.VIEW.near,APP_CONFIG.VIEW.far);
+camera.position.set(5,5,5);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.shadowMap.enabled=false;
+canvasContainer.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+controls.rotateSpeed=APP_CONFIG.VIEW.rotateSpeed;
+controls.zoomSpeed=APP_CONFIG.VIEW.zoomSpeed;
+controls.panSpeed=APP_CONFIG.VIEW.panSpeed;
+scene.add(new THREE.AmbientLight(0xffffff,APP_CONFIG.VIEW.ambientLightIntensity));
+scene.add(new THREE.HemisphereLight(0xffffff,0x777777,APP_CONFIG.VIEW.hemisphereLightIntensity));
+const directional=new THREE.DirectionalLight(0xffffff,APP_CONFIG.VIEW.directionalLightIntensity);directional.position.set(10,20,10);directional.castShadow=false;scene.add(directional);
+const fillLight=new THREE.DirectionalLight(0xffffff,APP_CONFIG.VIEW.fillLightIntensity);fillLight.position.set(-10,8,-10);fillLight.castShadow=false;scene.add(fillLight);
+scene.add(modelGroup);
+if(APP_CONFIG.VIEW.showAxes) scene.add(new THREE.AxesHelper(1));
+new MeasurementManager({scene,camera,renderer,controls,modelGroup});
+
+async function autoLoadModels(){
+    showLoading("固定パスからGLBを読み込んでいます...");
+    try{
+        const result=await loadSequentialTiles({
+            onStatus:text=>{modelStatus.textContent=text;loadingText.textContent=text;},
+            onFileLoaded:({fileName,loadedCount})=>{modelStatus.textContent=`${loadedCount}個読込済み：${fileName}`;progressBar.style.width=`${Math.min(92,12+(loadedCount%50)/50*80)}%`;},
+            onBatchLoaded:async({batchStartNumber,batchEndNumber,loadedCount})=>{
+                modelGroup.updateMatrixWorld(true);
+                renderer.render(scene,camera);
+                modelStatus.textContent=`${loadedCount}個表示完了（タイル${batchStartNumber}～${batchEndNumber}）`;
+                loadingText.textContent=`${loadedCount}個のモデルを表示しました`;
+                progressBar.style.width="100%";
+            },
+            onComplete:({tileCount})=>{modelStatus.textContent=`${tileCount}個のGLBを読み込みました`;loadingText.textContent=`読み込み完了：${tileCount}個`;progressBar.style.width="100%";},
+            onError:({number,error})=>console.error(`タイル${number} 読み込みエラー`,error)
+        });
+        fitCameraToObject(modelGroup);
+        document.getElementById("measurementResult").innerHTML=`<b>読み込み完了</b><br><br>${result.tileCount}個のGLBを読み込みました。`;
+        setTimeout(hideLoading,700);
+    }catch(error){
+        console.error(error);modelStatus.textContent="GLB読み込みエラー";loadingText.textContent="読み込みエラー";progressBar.style.width="100%";
+        document.getElementById("measurementResult").innerHTML=`<b>読み込みエラー</b><br><br>${String(error.message||error)}`;
+    }
+}
+function fitCameraToObject(object){
+    object.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(object);if(box.isEmpty())return;
+    const center=box.getCenter(new THREE.Vector3());const size=box.getSize(new THREE.Vector3());const maxSize=Math.max(size.x,size.y,size.z,0.001);const fov=THREE.MathUtils.degToRad(camera.fov);let distance=maxSize/(2*Math.tan(fov/2));distance*=1.5;
+    camera.position.set(center.x+distance,center.y+distance*0.7,center.z+distance);camera.near=Math.max(distance/10000,0.001);camera.far=Math.max(distance*100,1000);camera.updateProjectionMatrix();controls.target.copy(center);controls.update();
+}
+function resize(){const width=canvasContainer.clientWidth;const height=canvasContainer.clientHeight;if(width<=0||height<=0)return;camera.aspect=width/height;camera.updateProjectionMatrix();renderer.setSize(width,height,false);}
+window.addEventListener("resize",resize);resize();
+function showLoading(text){loadingPanel.classList.remove("hidden");loadingText.textContent=text;progressBar.style.width="8%";}
+function hideLoading(){loadingPanel.classList.add("hidden");}
+function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}
+animate();
+autoLoadModels();
+
+
+============================================================
+FILE: 07_measurementRange.js.txt
+============================================================
+import * as THREE from "three";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
+
+export class MeasurementRange {
+    constructor({ scene, camera, renderer, controls, modelGroup }) {
+        this.scene = scene;
+        this.camera = camera;
+        this.renderer = renderer;
+        this.controls = controls;
+        this.modelGroup = modelGroup;
+        this.type = null;
+        this.object = null;
+        this.transform = new TransformControls(camera, renderer.domElement);
+        this.transform.setSpace("local");
+        this.transform.setMode("translate");
+        this.scene.add(this.transform.getHelper());
+        this.transform.getHelper().visible = false;
+        this.transform.addEventListener("dragging-changed", e => {
+            this.controls.enabled = !e.value;
+        });
+    }
+
+    create(type = "box") {
+        this.removeObject();
+        this.type = type;
+        const box = new THREE.Box3().setFromObject(this.modelGroup);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const base = Math.max(Math.min(size.x || 1, size.y || 1, size.z || 1), 0.1);
+
+        let geometry;
+        if (type === "cylinder") {
+            geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 48, 1, true);
+        } else {
+            geometry = new THREE.BoxGeometry(1, 1, 1);
+        }
+
+        const material = new THREE.MeshBasicMaterial({
+            color: 0x00d8ff,
+            transparent: true,
+            opacity: 0.16,
+            depthTest: false,
+            side: THREE.DoubleSide
+        });
+        this.object = new THREE.Mesh(geometry, material);
+        this.object.position.copy(center);
+        this.object.scale.set(base, base, base);
+        this.object.renderOrder = 2000;
+        this.scene.add(this.object);
+
+        const edges = new THREE.LineSegments(
+            new THREE.EdgesGeometry(geometry),
+            new THREE.LineBasicMaterial({ color: 0x00d8ff, depthTest: false, transparent: true, opacity: 0.95 })
+        );
+        edges.renderOrder = 2001;
+        this.object.add(edges);
+
+        this.transform.attach(this.object);
+        this.transform.getHelper().visible = true;
+        return this.object;
+    }
+
+    setMode(mode) {
+        if (!this.object) return;
+        if (!["translate", "rotate", "scale"].includes(mode)) return;
+        this.transform.setMode(mode);
+    }
+
+    getRange() {
+        if (!this.object || !this.type) return null;
+        this.object.updateMatrixWorld(true);
+        return {
+            type: this.type,
+            matrixWorld: this.object.matrixWorld.clone(),
+            inverseMatrixWorld: this.object.matrixWorld.clone().invert()
+        };
+    }
+
+    removeObject() {
+        if (!this.object) return;
+        this.transform.detach();
+        this.scene.remove(this.object);
+        this.object.traverse(o => {
+            o.geometry?.dispose?.();
+            o.material?.dispose?.();
+        });
+        this.object = null;
+        this.type = null;
+        this.transform.getHelper().visible = false;
+    }
+
+    clear() { this.removeObject(); }
+}
+
+
+============================================================
+FILE: 08_areaMeasurement.js.txt
+============================================================
+import * as THREE from "three";
+
+const EPS = 1e-10;
+
+export function calculateAreaInRange(modelGroup, range, options = {}) {
+    if (!range) return { area: 0, meshCount: 0, triangleCount: 0 };
+    const cylinderMaxDepth = options.cylinderMaxDepth ?? 7;
+    const cylinderTolerance = options.cylinderTolerance ?? 0.002;
+    let area = 0, meshCount = 0, triangleCount = 0;
+
+    modelGroup.updateMatrixWorld(true);
+    modelGroup.traverse(mesh => {
+        if (!mesh.isMesh || !mesh.visible) return;
+        const pos = mesh.geometry?.attributes?.position;
+        if (!pos) return;
+        const index = mesh.geometry.index;
+        let meshArea = 0;
+        const add = (i0, i1, i2) => {
+            const a = new THREE.Vector3().fromBufferAttribute(pos, i0).applyMatrix4(mesh.matrixWorld);
+            const b = new THREE.Vector3().fromBufferAttribute(pos, i1).applyMatrix4(mesh.matrixWorld);
+            const c = new THREE.Vector3().fromBufferAttribute(pos, i2).applyMatrix4(mesh.matrixWorld);
+            let v;
+            if (range.type === "box") v = clippedTriangleAreaBox(a, b, c, range.inverseMatrixWorld);
+            else v = clippedTriangleAreaCylinder(a, b, c, range.inverseMatrixWorld, cylinderMaxDepth, cylinderTolerance);
+            if (v > EPS) { meshArea += v; triangleCount++; }
+        };
+        if (index) {
+            for (let i = 0; i + 2 < index.count; i += 3) add(index.getX(i), index.getX(i+1), index.getX(i+2));
+        } else {
+            for (let i = 0; i + 2 < pos.count; i += 3) add(i, i+1, i+2);
+        }
+        if (meshArea > EPS) { area += meshArea; meshCount++; }
+    });
+    return { area, meshCount, triangleCount };
+}
+
+function clippedTriangleAreaBox(aW, bW, cW, inv) {
+    let poly = [aW.clone().applyMatrix4(inv), bW.clone().applyMatrix4(inv), cW.clone().applyMatrix4(inv)];
+    const planes = [
+        [0,  1, 0.5], [0, -1, 0.5],
+        [1,  1, 0.5], [1, -1, 0.5],
+        [2,  1, 0.5], [2, -1, 0.5]
+    ];
+    for (const [axis, sign, limit] of planes) {
+        poly = clipPolygon(poly, p => limit - sign * p.getComponent(axis), (p1,p2,d1,d2) => p1.clone().lerp(p2, d1/(d1-d2)));
+        if (poly.length < 3) return 0;
+    }
+    const matrix = inv.clone().invert();
+    return polygonWorldArea(poly.map(p => p.applyMatrix4(matrix)));
+}
+
+function clipPolygon(poly, distanceFn, intersectFn) {
+    if (!poly.length) return [];
+    const out = [];
+    for (let i=0;i<poly.length;i++) {
+        const cur=poly[i], prev=poly[(i+poly.length-1)%poly.length];
+        const dc=distanceFn(cur), dp=distanceFn(prev);
+        const cin=dc>=-EPS, pin=dp>=-EPS;
+        if (cin !== pin) out.push(intersectFn(prev,cur,dp,dc));
+        if (cin) out.push(cur.clone());
+    }
+    return out;
+}
+
+function polygonWorldArea(poly) {
+    if (poly.length < 3) return 0;
+    let area=0;
+    for (let i=1;i+1<poly.length;i++) area += triangleArea(poly[0],poly[i],poly[i+1]);
+    return area;
+}
+
+function triangleArea(a,b,c) {
+    return new THREE.Vector3().crossVectors(
+        new THREE.Vector3().subVectors(b,a),
+        new THREE.Vector3().subVectors(c,a)
+    ).length()*0.5;
+}
+
+function insideCylinderLocal(p) {
+    return Math.abs(p.y) <= 0.5 + EPS && (p.x*p.x + p.z*p.z) <= 0.25 + EPS;
+}
+
+function clippedTriangleAreaCylinder(aW,bW,cW,inv,maxDepth,tolerance) {
+    const matrix = inv.clone().invert();
+    const a=aW.clone().applyMatrix4(inv), b=bW.clone().applyMatrix4(inv), c=cW.clone().applyMatrix4(inv);
+    return cylinderRecursive(a,b,c,matrix,0,maxDepth,tolerance);
+}
+
+function cylinderRecursive(a,b,c,matrix,depth,maxDepth,tolerance) {
+    const ia=insideCylinderLocal(a), ib=insideCylinderLocal(b), ic=insideCylinderLocal(c);
+    if (ia && ib && ic) return triangleArea(a.clone().applyMatrix4(matrix),b.clone().applyMatrix4(matrix),c.clone().applyMatrix4(matrix));
+
+    const minY=Math.min(a.y,b.y,c.y), maxY=Math.max(a.y,b.y,c.y);
+    if (maxY < -0.5 || minY > 0.5) return 0;
+    const minX=Math.min(a.x,b.x,c.x), maxX=Math.max(a.x,b.x,c.x);
+    const minZ=Math.min(a.z,b.z,c.z), maxZ=Math.max(a.z,b.z,c.z);
+    if (minX > 0.5 || maxX < -0.5 || minZ > 0.5 || maxZ < -0.5) return 0;
+
+    const ab=a.distanceTo(b), bc=b.distanceTo(c), ca=c.distanceTo(a);
+    if (depth >= maxDepth || Math.max(ab,bc,ca) <= tolerance) {
+        const centroid=a.clone().add(b).add(c).multiplyScalar(1/3);
+        if (!insideCylinderLocal(centroid)) return 0;
+        return triangleArea(a.clone().applyMatrix4(matrix),b.clone().applyMatrix4(matrix),c.clone().applyMatrix4(matrix));
+    }
+
+    const abm=a.clone().add(b).multiplyScalar(0.5);
+    const bcm=b.clone().add(c).multiplyScalar(0.5);
+    const cam=c.clone().add(a).multiplyScalar(0.5);
+    return cylinderRecursive(a,abm,cam,matrix,depth+1,maxDepth,tolerance)
+         + cylinderRecursive(abm,b,bcm,matrix,depth+1,maxDepth,tolerance)
+         + cylinderRecursive(cam,bcm,c,matrix,depth+1,maxDepth,tolerance)
+         + cylinderRecursive(abm,bcm,cam,matrix,depth+1,maxDepth,tolerance);
+}
+
+
+============================================================
+FILE: 09_README_今日の変更.txt
+============================================================
+2026-09-29 統合版
+
+含まれる変更:
+1. 2点距離測定はLine2による太線版を維持
+2. 測定点ドラッグ、線クリック結果表示を維持
+3. XYZ寸法測定を維持
+4. 表面積用の範囲指定を追加
+   - 直方体
+   - 円柱
+   - 移動 / 回転 / サイズ変更
+5. 直方体の表面積は境界クリッピング対応
+6. 円柱は細分化方式で範囲内面積を算出
+7. 体積測定は従来仕様を維持
+8. GLBを50個ごとに区切って読み込み
+9. 50個追加後にrenderer.render()を実行
+10. requestAnimationFrameを待ってから次の51個目へ進む
+
+追加依存:
+three/addons/controls/TransformControls.js がローカル環境に必要です。
+Three.js r184と同じバージョンを使用してください。
+
+config.js:
+batchSize: 50
+batchWaitMs: 50
+で区切り数と待機時間を変更できます。
